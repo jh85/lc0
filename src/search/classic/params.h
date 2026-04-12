@@ -130,6 +130,9 @@ class BaseSearchParams {
     return kMaxOutOfOrderEvalsFactor;
   }
   float GetNpsLimit() const { return kNpsLimit; }
+  std::string GetEvalTraceFile() const {
+    return options_.Get<std::string>(kEvalTraceFileId);
+  }
 
   int GetTaskWorkersPerSearchWorker() const {
     return kTaskWorkersPerSearchWorker;
@@ -230,6 +233,7 @@ class BaseSearchParams {
   static const OptionId kUCIOpponentId;
   static const OptionId kUCIRatingAdvId;
   static const OptionId kSearchSpinBackoffId;
+  static const OptionId kEvalTraceFileId;
   static const OptionId kGarbageCollectionDelayId;
 
  protected:

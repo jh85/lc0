@@ -29,6 +29,7 @@
 
 #include <array>
 #include <condition_variable>
+#include <fstream>
 #include <functional>
 #include <optional>
 #include <shared_mutex>
@@ -133,6 +134,11 @@ class Search {
   // Depth of a root node is 0 (even number).
   float GetDrawScore(bool is_odd_depth) const;
 
+  // Logs root node evaluation to the eval trace CSV file.
+  // v, d, m are the individual leaf values (side-to-move perspective).
+  // depth is the number of edges from root to the leaf.
+  void LogEvalTrace(float v, float d, float m, uint16_t depth);
+
   // Ensure that all shared collisions are cancelled and clear them out.
   void CancelSharedCollisions();
 
@@ -200,6 +206,11 @@ class Search {
 
   std::unique_ptr<UciResponder> uci_responder_;
   ContemptMode contempt_mode_;
+
+  // Eval trace logging.
+  Mutex eval_trace_mutex_;
+  std::ofstream eval_trace_file_;
+
   friend class SearchWorker;
 };
 

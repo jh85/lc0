@@ -175,6 +175,18 @@ Search::Search(const NodeTree& tree, Backend* backend,
     pending_searchers_.store(params_.GetMaxConcurrentSearchers(),
                              std::memory_order_release);
   }
+  // Open eval trace file if requested.
+  {
+    const auto trace_path = params_.GetEvalTraceFile();
+    if (!trace_path.empty()) {
+      eval_trace_file_.open(trace_path);
+      if (eval_trace_file_.is_open()) {
+        eval_trace_file_
+            << "playouts,V,Q,WL,D,M,depth" << std::endl;
+      }
+    }
+  }
+
   contempt_mode_ = params_.GetContemptMode();
   // Make sure the contempt mode is never "play" beyond this point.
   if (contempt_mode_ == ContemptMode::PLAY) {
@@ -2292,6 +2304,9 @@ void SearchWorker::DoBackupUpdateSingleNode(
     }
   }
   search_->total_playouts_ += node_to_process.multivisit;
+  // Log the individual leaf eval arriving at root (side-to-move perspective).
+  // v was last negated to root's internal frame; negate again for side-to-move.
+  search_->LogEvalTrace(-v, d, m, node_to_process.depth);
   if (node_to_process.nn_queried && !node_to_process.is_cache_hit) {
     search_->network_evaluations_++;
   }
@@ -2366,6 +2381,21 @@ bool SearchWorker::MaybeSetBounds(Node* p, float m, int* n_to_fix,
 
   // Bounds were set, so indicate we should check the parent too.
   return true;
+}
+
+void Search::LogEvalTrace(float v, float d, float m, uint16_t depth)
+    REQUIRES(nodes_mutex_) {
+  if (!eval_trace_file_.is_open()) return;
+
+  const int64_t playouts = total_playouts_ + initial_visits_;
+  const float draw_score = GetDrawScore(false);
+  // Q includes draw contempt; WL is pure win-loss average.
+  const float q = -root_node_->GetQ(-draw_score);
+  const float wl = -root_node_->GetWL();
+
+  Mutex::Lock trace_lock(eval_trace_mutex_);
+  eval_trace_file_ << playouts << "," << v << "," << q << "," << wl << ","
+                    << d << "," << m << "," << depth << "\n";
 }
 
 // 7. Update the Search's status and progress information.
