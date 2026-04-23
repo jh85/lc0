@@ -649,6 +649,18 @@ void Search::MaybeTriggerStop(const IterationStats& stats,
     SendUciInfo();
     EnsureBestMoveKnown();
     SendMovesStats();
+    {
+      const auto elapsed_ms = GetTimeSinceStart();
+      const auto playouts = total_playouts_;
+      const auto nps =
+          elapsed_ms > 0 ? playouts * 1000 / elapsed_ms : 0;
+      LOGFILE << "Search complete: playouts=" << playouts
+              << " time=" << elapsed_ms << "ms"
+              << " NPS=" << nps;
+      CERR << "Search complete: playouts=" << playouts
+           << " time=" << elapsed_ms << "ms"
+           << " NPS=" << nps;
+    }
     BestMoveInfo info(final_bestmove_, final_pondermove_);
     uci_responder_->OutputBestMove(&info);
     stopper_->OnSearchDone(stats);
